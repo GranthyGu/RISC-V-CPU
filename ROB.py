@@ -119,12 +119,15 @@ class ROB(Module):
         updated_head_ptr = (updated_head_ptr == Int(32)(ROB_SIZE)).select(Int(32)(0), updated_head_ptr)
         
         updated_head_idx = updated_head_ptr.bitcast(Bits(32))[0:2]
-
+        has_unresolved_branch = Bits(1)(0)
+        for i in range(ROB_SIZE):
+            has_unresolved_branch = has_unresolved_branch | (allocated_array[i][0] & is_branch_array[i])
+        stall_for_store = has_unresolved_branch & is_memory_write
         commit = ~rob_empty & read_mux(ready_array, head_idx, ROB_SIZE, 1)
         updated_pc_addr = addr_array[updated_head_idx]
         pc_result_val = read_mux(pc_result_array, head_idx, ROB_SIZE, 32)
         is_misprediction = commit & (updated_pc_addr != pc_result_val) & (updated_head_ptr != tail_ptr)
-        should_receive = ~rob_phys_full & receive & (~clear_signal_array[0])
+        should_receive = ~rob_phys_full & receive & (~clear_signal_array[0]) & (~stall_for_store)
 
         with Condition(should_receive & ~is_misprediction):
             rd_valid_array[tail_idx] = has_rd
@@ -203,6 +206,7 @@ class ROB(Module):
              
         with Condition(modify_recorder & (modify_rd != Bits(5)(0))):
             log("RF entry {} update value to 0x{:08x}", modify_rd, modify_value)
+            log("writeback x{} 0x{:x}", modify_rd, modify_value)
             rf_value_array[modify_rd] = modify_value
     
         with Condition(commit):
@@ -227,7 +231,7 @@ class ROB(Module):
 
         # log("ROB size updated to {}", new_rob_size)
 
-        rob_full = (new_rob_size >= Int(32)(ROB_SIZE // 2))
+        rob_full = (new_rob_size >= Int(32)(ROB_SIZE // 2)) | stall_for_store
         rob_full_array[0] = rob_full
         rob_full_array_for_fetcher[0] = (rob_size[0] >= Int(32)(ROB_SIZE - 2))
 
