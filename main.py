@@ -53,7 +53,7 @@ def init_workspace(base_path, case):
     # cp_if_exists(f'{base_path}/{case}.sh', f'{workspace}/workload.sh', False)
 
 def build_cpu(depth_log: int):
-    init_workspace(f"{current_path}/workloads", "vector_multiply")
+    init_workspace(f"{current_path}/workloads", "vector_add")
     with open(f'{workspace}/workload.config') as f:
         raw = f.readline()
         raw = raw.replace('offset:', "'offset':").replace('data_offset:', "'data_offset':")
@@ -66,12 +66,12 @@ def build_cpu(depth_log: int):
     sys = SysBuilder("Tomasulo-CPU")
 
     with sys:
-        rob_index_array_to_alu = RegArray(Bits(5), 1)
+        rob_index_array_to_alu = RegArray(Bits(3), 1)
         result_array_to_alu = RegArray(Bits(32), 1)
         pc_result_array_to_alu = RegArray(Bits(32), 1)
         signal_array_to_alu = RegArray(Bits(1), 1)
 
-        rob_index_array_to_lsq = RegArray(Bits(5), 1)
+        rob_index_array_to_lsq = RegArray(Bits(3), 1)
         pc_result_array_to_lsq = RegArray(Bits(32), 1)
         signal_array_to_lsq = RegArray(Bits(1), 1)
 

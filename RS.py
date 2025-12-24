@@ -46,9 +46,9 @@ class RS(Module):
         rs2_array = RegArray(Bits(5), RS_SIZE)
         rs2_value_array = [RegArray(Bits(32), 1) for _ in range(RS_SIZE)]
         has_rs2_array = RegArray(Bits(1), RS_SIZE)  
-        rs1_recorder_array = RegArray(Bits(5), RS_SIZE)
+        rs1_recorder_array = RegArray(Bits(3), RS_SIZE)
         has_rs1_recorder_array = [RegArray(Bits(1), 1) for _ in range(RS_SIZE)]
-        rs2_recorder_array = RegArray(Bits(5), RS_SIZE)
+        rs2_recorder_array = RegArray(Bits(3), RS_SIZE)
         has_rs2_recorder_array = [RegArray(Bits(1), 1) for _ in range(RS_SIZE)]
         imm_array = RegArray(Bits(32), RS_SIZE)
         has_imm_array = RegArray(Bits(1), RS_SIZE)

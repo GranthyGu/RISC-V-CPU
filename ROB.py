@@ -46,7 +46,7 @@ class ROB(Module):
         # rf_has_recorder_array: Array(Bits(1), 32)             存储当前 rf 中各个寄存器是否有 recorder
 
         rf_value_array = RegArray(Bits(32), 32)
-        rf_recorder_array = RegArray(Bits(5), 32)
+        rf_recorder_array = RegArray(Bits(3), 32)
         rf_has_recorder_array = [RegArray(Bits(1), 1) for _ in range(32)]
 
         # ROB 自身的性质
@@ -196,7 +196,7 @@ class ROB(Module):
 
         with Condition(receive_write):
              write1hot(rf_has_recorder_array, rd, Bits(1)(1))
-             rf_recorder_array[rd] = tail_idx.bitcast(Bits(5))
+             rf_recorder_array[rd] = tail_idx.bitcast(Bits(3))
              
         with Condition(commit_write & ~conflict & ~is_misprediction):
              write1hot(rf_has_recorder_array, modify_rd, Bits(1)(0))
@@ -274,7 +274,7 @@ class ROB(Module):
         lsq.async_called(
             lsq_write = lsq_write,
             lsq_modify_recorder = lsq_modify_recorder,
-            rob_index = tail_idx.bitcast(Bits(5)),
+            rob_index = tail_idx.bitcast(Bits(3)),
             signals = signals,
             rs1_value = rf_value_array[rs1],
             rs1_recorder = rf_recorder_array[rs1],

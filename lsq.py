@@ -10,13 +10,13 @@ class LSQ(Module):
         super().__init__(ports={
             "lsq_write": Port(Bits(1)),
             "lsq_modify_recorder": Port(Bits(1)),
-            "rob_index": Port(Bits(5)),
+            "rob_index": Port(Bits(3)),
             "signals": Port(decoder_signals),
             "rs1_value": Port(Bits(32)),
-            "rs1_recorder": Port(Bits(5)),
+            "rs1_recorder": Port(Bits(3)),
             "rs1_has_recorder": Port(Bits(1)),
             "rs2_value": Port(Bits(32)),
-            "rs2_recorder": Port(Bits(5)),
+            "rs2_recorder": Port(Bits(3)),
             "rs2_has_recorder": Port(Bits(1)),
             "addr": Port(Bits(32)),
             "lsq_modify_rd": Port(Bits(5)),
@@ -43,18 +43,18 @@ class LSQ(Module):
         lsq_full = Bits(1)(0)                                 # 存储 LSQ 是否已满
         allocated_array = [RegArray(Bits(1), 1) for _ in range(LSQ_SIZE)]         # LSQ 中这一条有没有分配指令
 
-        rob_index_array = RegArray(Bits(5), LSQ_SIZE)         # 存储对应的 ROB 条目的索引
+        rob_index_array = RegArray(Bits(3), LSQ_SIZE)         # 存储对应的 ROB 条目的索引
         is_load_array = RegArray(Bits(1), LSQ_SIZE)           # 是否为 load 指令
         is_store_array = RegArray(Bits(1), LSQ_SIZE)          # 是否为 store 指令
         rs1_array = RegArray(Bits(5), LSQ_SIZE)               # 存储 rs1 的编号
         rs1_value_array = [RegArray(Bits(32), 1) for _ in range(LSQ_SIZE)]        # 存储 rs1 的值
         has_rs1_array = RegArray(Bits(1), LSQ_SIZE)           # 存储指令中是否有 rs1
-        rs1_recorder_array = RegArray(Bits(5), LSQ_SIZE)      # 存储 rs1 的 recorder
+        rs1_recorder_array = RegArray(Bits(3), LSQ_SIZE)      # 存储 rs1 的 recorder
         has_rs1_recorder_array = [RegArray(Bits(1), 1) for _ in range(LSQ_SIZE)]  # 存储 rs1 是否有 recorder
         rs2_array = RegArray(Bits(5), LSQ_SIZE)               # 存储 rs2 的编号
         rs2_value_array = [RegArray(Bits(32), 1) for _ in range(LSQ_SIZE)]        # 存储 rs2 的值
         has_rs2_array = RegArray(Bits(1), LSQ_SIZE)           # 存储指令中是否有 rs2
-        rs2_recorder_array = RegArray(Bits(5), LSQ_SIZE)      # 存储 rs2 的 recorder
+        rs2_recorder_array = RegArray(Bits(3), LSQ_SIZE)      # 存储 rs2 的 recorder
         has_rs2_recorder_array = [RegArray(Bits(1), 1) for _ in range(LSQ_SIZE)]   # 存储 rs2 是否有 recorder
         imm_array = RegArray(Bits(32), LSQ_SIZE)              # 存储立即数 imm
         addr_array = RegArray(Bits(32), LSQ_SIZE)             # 存储计算得到的地址

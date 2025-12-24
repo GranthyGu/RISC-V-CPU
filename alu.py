@@ -6,7 +6,7 @@ class ALU(Module):
     def __init__(self):
         super().__init__(ports = {
             "valid": Port(Bits(1)),
-            "rob_index": Port(Bits(5)),
+            "rob_index": Port(Bits(3)),
             "a": Port(Bits(32)),
             "b": Port(Bits(32)),
             "alu_a": Port(Bits(32)),
