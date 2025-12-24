@@ -1,0 +1,32 @@
+00000293 //  0: addi x5, x0, 0      i = 0
+01400313 //  4: addi x6, x0, 20     limit = 20
+00000393 //  8: addi x7, x0, 0      base_a = 0
+05000e13 // 12: addi x28, x0, 80    base_b = 80
+0a000e93 // 16: addi x29, x0, 160   base_c = 160
+0003a583 // 20: lw x11, 0(x7)       x = a[i]
+000e2603 // 24: lw x12, 0(x28)      y = b[i]
+040000ef // 28: jal x1, 64          call multiply
+00aea023 // 32: sw x10, 0(x29)      c[i] = result
+00438393 // 36: addi x7, x7, 4      base_a++
+004e0e13 // 40: addi x28, x28, 4    base_b++
+004e8e93 // 44: addi x29, x29, 4    base_c++
+00128293 // 48: addi x5, x5, 1      i++
+fe62c0e3 // 52: blt x5, x6, -32     if i < 20, goto loop_1
+00000293 // 56: addi x5, x0, 0      i = 0
+0a000e93 // 60: addi x29, x0, 160   base_c = 160
+00000513 // 64: addi x10, x0, 0     ans = 0
+000eaf03 // 68: lw x30, 0(x29)      load c[i]
+01e50533 // 72: add x10, x10, x30   ans += c[i]
+004e8e93 // 76: addi x29, x29, 4    base_c++
+00128293 // 80: addi x5, x5, 1      i++
+fe62c8e3 // 84: blt x5, x6, -16     if i < 20, goto loop_2
+00100073 // 88: ebreak              End of program
+00000513 // 92: addi x10, x0, 0     ans = 0
+00060e63 // 96: beq x12, x0, 28     if y == 0, goto end_mult
+00167693 // 100: andi x13, x12, 1    x13 = y & 1
+00068463 // 104: beq x13, x0, 8      if (y & 1) == 0, goto skip_add
+00b50533 // 108: add x10, x10, x11   ans += x
+00159593 // 112: slli x11, x11, 1    x <<= 1
+00165613 // 116: srli x12, x12, 1    y >>= 1
+fe9ff06f // 120: jal x0, -24         goto loop_mult
+00008067 // 124: jalr x0, 0(x1)      return
