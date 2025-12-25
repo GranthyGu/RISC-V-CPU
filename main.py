@@ -18,24 +18,16 @@ current_path = os.path.dirname(os.path.abspath(__file__))
 workspace = f"{current_path}/.workspace/"
 
 class Driver(Module):
-    
     def __init__(self):
         super().__init__(ports={})
 
     @module.combinational
     def build(self, fetcher: Module):
         init_reg = RegArray(UInt(1), 1, initializer=[1])
-        # init_cache = SRAM(width = 32, depth = 32, init_file = f"{workspace}/workload.init")
-        # init_cache.name = "init_cache"
-        # init_cache.build(we = Bits(1)(0), re = init_reg[0].bitcast(Bits(1)), wdata = Bits(32)(0), addr = Bits(5)(0))
-
         with Condition(init_reg[0] == UInt(1)(1)):
-            # user.async_called()
             init_reg[0] = UInt(1)(0)
-        
         with Condition(init_reg[0] == UInt(1)(0)):
             d_call = fetcher.async_called()
-        # return init_cache
 
 def cp_if_exists(src, dst, required):
     if os.path.exists(src):
@@ -50,10 +42,9 @@ def init_workspace(base_path, case):
     cp_if_exists(f'{base_path}/{case}.exe', f'{workspace}/workload.exe', False)
     cp_if_exists(f'{base_path}/{case}.data', f'{workspace}/workload.data', True)
     cp_if_exists(f'{base_path}/{case}.config', f'{workspace}/workload.config', False)
-    # cp_if_exists(f'{base_path}/{case}.sh', f'{workspace}/workload.sh', False)
 
 def build_cpu(depth_log: int):
-    init_workspace(f"{current_path}/workloads", "vector_add")
+    init_workspace(f"{current_path}/workloads", "0to100")
     with open(f'{workspace}/workload.config') as f:
         raw = f.readline()
         raw = raw.replace('offset:', "'offset':").replace('data_offset:', "'data_offset':")
@@ -82,7 +73,13 @@ def build_cpu(depth_log: int):
         rob_full = RegArray(Bits(1), 1)
         rob_full_for_fetcher = RegArray(Bits(1), 1)
 
-        icache = SRAM(width=32, depth = 1<<depth_log, init_file = f"{workspace}/workload.exe") # 存储指令
+        BHT_LOG_SIZE = 6
+        BHT_SIZE = 1 << BHT_LOG_SIZE
+        
+        bht_array = RegArray(Bits(2), BHT_SIZE, initializer=[1] * BHT_SIZE)
+        btb_target_array = RegArray(Bits(32), BHT_SIZE, initializer=[0] * BHT_SIZE)
+
+        icache = SRAM(width=32, depth = 1<<depth_log, init_file = f"{workspace}/workload.exe")
         icache.name = "icache"
         
         rob = ROB()
@@ -92,7 +89,7 @@ def build_cpu(depth_log: int):
         alu = ALU()
         rs = RS()
         lsq = LSQ()
-        dcache = SRAM(width=32, depth = 1<<depth_log, init_file = f"{workspace}/workload.data") # 存储数据
+        dcache = SRAM(width=32, depth = 1<<depth_log, init_file = f"{workspace}/workload.data")
         dcache.name = "dcache"
 
         rob.build(
@@ -109,7 +106,10 @@ def build_cpu(depth_log: int):
             reset_pc_addr_array = reset_pc_addr,
             rs = rs,
             lsq = lsq,
-            clear_signal_array = clear_signal_array
+            clear_signal_array = clear_signal_array,
+            bht_array = bht_array,
+            btb_target_array = btb_target_array,
+            bht_log_size = BHT_LOG_SIZE
         )
 
         pc_reg, pc_addr = fetcher.build()
@@ -123,7 +123,10 @@ def build_cpu(depth_log: int):
             decode_valid_array = decode_valid,
             icache = icache,
             clear_signal_array = clear_signal_array,
-            reset_pc_addr_array = reset_pc_addr
+            reset_pc_addr_array = reset_pc_addr,
+            bht_array = bht_array,
+            btb_target_array = btb_target_array,
+            bht_log_size = BHT_LOG_SIZE
         )
 
         decoder.build(rob = rob, rdata = icache.dout, rob_full_array = rob_full, decode_valid_array = decode_valid, clear_signal_array = clear_signal_array)
@@ -163,7 +166,6 @@ def build_cpu(depth_log: int):
 
     simulator_path, verilog_path = elaborate(sys, **conf)
 
-    #raw = utils.run_simulator(simulator_path)
     raw = utils.run_verilator(verilog_path)
     with open(f'{workspace}/verilation.log', 'w') as f:
         f.write(raw)
