@@ -109,7 +109,7 @@ class ROB(Module):
         for i in range(ROB_SIZE):
             has_unresolved_branch = has_unresolved_branch | (allocated_array[i][0] & is_branch_array[i])
         stall_for_store = has_unresolved_branch & is_memory_write
-        should_receive = ~rob_phys_full & receive & (~clear_signal_array[0]) & (~stall_for_store)
+        should_receive = ~rob_phys_full & receive & (~clear_signal_array[0])
 
         with Condition(should_receive & ~is_misprediction):
             rd_valid_array[tail_idx] = has_rd
@@ -166,7 +166,7 @@ class ROB(Module):
                        (rf_recorder_array[modify_rd] == recorder.bitcast(Bits(5)))
         conflict = receive_write & commit_write & (rd == modify_rd)
 
-        with Condition(receive_write):
+        with Condition(receive_write & (rd != Bits(5)(0))):
              write1hot(rf_has_recorder_array, rd, Bits(1)(1))
              rf_recorder_array[rd] = tail_idx.bitcast(Bits(3))
         with Condition(commit_write & ~conflict & ~is_misprediction):
@@ -193,7 +193,7 @@ class ROB(Module):
             bht_array[bht_idx] = new_state
             
             with Condition(actual_taken):
-                 btb_target_array[bht_idx] = pc_result_val
+                btb_target_array[bht_idx] = pc_result_val
 
         with Condition(~rob_empty & is_final_array[head_idx]):
             log("ebreak")
@@ -211,7 +211,7 @@ class ROB(Module):
         new_rob_size = is_misprediction.select(Int(32)(0), new_size)
         rob_size[0] = new_rob_size
 
-        rob_full = (new_rob_size >= Int(32)(ROB_SIZE // 2)) | stall_for_store
+        rob_full = (new_rob_size >= Int(32)(ROB_SIZE // 2))
         rob_full_array[0] = rob_full
         rob_full_array_for_fetcher[0] = (rob_size[0] >= Int(32)(ROB_SIZE - 2))
 
@@ -260,4 +260,14 @@ class ROB(Module):
             lsq_recorder = recorder.bitcast(Bits(5)),
             lsq_modify_value = modify_value
         )
+        for i in range(ROB_SIZE):
+            log("ROB Entry {}: allocated: {} | ready: {} | pc_addr: 0x{:08x}",
+                Bits(5)(i),
+                allocated_array[i][0],
+                ready_array[i][0],
+                addr_array[i]
+            )
+        log("register value 10: 0x{:08x}", rf_value_array[10])
+        log("register value 30: 0x{:08x}", rf_value_array[30])
         return rob_full
+    

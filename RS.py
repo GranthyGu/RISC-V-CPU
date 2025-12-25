@@ -142,20 +142,20 @@ class RS(Module):
 
 
         alu.async_called(
-                valid = send,
-                rob_index = rob_index_array[send_index],
-                a = a,
-                b = b,
-                alu_a = alu_a,
-                alu_b = alu_b,
-                link_pc = link_pc_array[send_index],
-                is_jalr = is_jalr_array[send_index],
-                cond = send.select(cond_array[send_index], Bits(RV32I_ALU.CNT)(1)),
-                flip = flip_array[send_index],
-                is_branch = is_branch_array[send_index],
-                calc_type = send.select(alu_type_array[send_index], Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_NONE)),
-                pc_addr = addr_array[send_index]
-            )
+            valid = send,
+            rob_index = rob_index_array[send_index],
+            a = a,
+            b = b,
+            alu_a = alu_a,
+            alu_b = alu_b,
+            link_pc = link_pc_array[send_index],
+            is_jalr = is_jalr_array[send_index],
+            cond = send.select(cond_array[send_index], Bits(RV32I_ALU.CNT)(1)),
+            flip = flip_array[send_index],
+            is_branch = is_branch_array[send_index],
+            calc_type = send.select(alu_type_array[send_index], Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_NONE)),
+            pc_addr = addr_array[send_index]
+        )
 
         with Condition(rs_modify_recorder):
             log("RS modify recorder: rs_recorder: {} | rs_modify_value: 0x{:08x}",
@@ -174,6 +174,6 @@ class RS(Module):
             for i in range(RS_SIZE):
                 allocated_array[i][0] = Bits(1)(0)
 
-        # for i in range(RS_SIZE):
-        #     log("rs1_value_array[{}] = 0x{:08x} | rs2_value_array[{}] = 0x{:08x}", Bits(3)(i), rs1_value_array[i][0], Bits(3)(i), rs2_value_array[i][0])
-        #     log("has_rs1_recorder_array[{}] = {} | has_rs2_recorder_array[{}] = {}", Bits(3)(i), has_rs1_recorder_array[i][0], Bits(3)(i), has_rs2_recorder_array[i][0])
+        for i in range(RS_SIZE):
+            # log("rs1_value_array[{}] = 0x{:08x} | rs2_value_array[{}] = 0x{:08x}", Bits(3)(i), rs1_value_array[i][0], Bits(3)(i), rs2_value_array[i][0])
+            log("has_rs1_recorder_array[{}] = {} | has_rs2_recorder_array[{}] = {}", Bits(3)(i), has_rs1_recorder_array[i][0], Bits(3)(i), has_rs2_recorder_array[i][0])
