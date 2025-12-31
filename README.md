@@ -4,8 +4,8 @@ A high-performance RISC-V CPU simulator implementing **Tomasulo's Algorithm** fo
 
 ## Contributors
 
-- **Granthy** - Core architecture and implementation
-- **Vitalrubbish** - Testing and optimization
+- **Granthy** -  Optimization, predictor and debugging
+- **Vitalrubbish** - Main architecture and testing
 
 ## Features
 
