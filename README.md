@@ -1,6 +1,6 @@
 # RISC-V CPU Simulator
 
-A high-performance RISC-V CPU simulator implementing **Tomasulo's Algorithm** for out-of-order execution, built with the [Assassyn](https://github.com/assassyn-public/assassyn) hardware description framework.
+A high-performance RISC-V CPU simulator implementing **Tomasulo's Algorithm** for out-of-order execution, built with the [Assassyn](https://github.com/Synthesys-Lab/assassyn) hardware description framework.
 
 ## Contributors
 
