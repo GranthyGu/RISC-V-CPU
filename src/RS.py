@@ -2,6 +2,7 @@ from assassyn.frontend import *
 from instruction import *
 from alu import *
 from mul_alu import *
+from div_alu import *
 from utils import *
 
 RS_SIZE = 8
@@ -37,6 +38,7 @@ class RS(Module):
             self, 
             alu: ALU,
             mul_alu: MUL_ALU,
+            div_alu: DIV_ALU,
             clear_signal_array: Array,
         ):
 
@@ -67,6 +69,8 @@ class RS(Module):
         get_high_bit_array = RegArray(Bits(1), RS_SIZE)
         rs1_sign_array = RegArray(Bits(1), RS_SIZE)
         rs2_sign_array = RegArray(Bits(1), RS_SIZE)
+        # Division related arrays
+        get_remainder_array = RegArray(Bits(1), RS_SIZE)
                                   
         (
             rs_write,
@@ -120,22 +124,37 @@ class RS(Module):
             get_high_bit_array[rob_index] = signals.get_high_bit
             rs1_sign_array[rob_index] = signals.rs1_sign
             rs2_sign_array[rob_index] = signals.rs2_sign
+            get_remainder_array[rob_index] = signals.get_remainder
             write1hot(allocated_array, rob_index, Bits(1)(1))
 
         send_index = Bits(3)(0)
         send = Bits(1)(0)
         send_index_to_mul = Bits(3)(0)
         send_to_mul = Bits(1)(0)
+        send_index_to_div = Bits(3)(0)
+        send_to_div = Bits(1)(0)
+        
+        # Check if instruction is for division ALU
+        is_div_type = (alu_type_array[0] == Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_DIV)) | (alu_type_array[0] == Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_REM))
+        
         for i in range(RS_SIZE):
             allocated = allocated_array[i][0]
             rs1_valid = (~has_rs1_array[i]) | (has_rs1_array[i] & (~has_rs1_recorder_array[i][0]))
             rs2_valid = (~has_rs2_array[i]) | (has_rs2_array[i] & (~has_rs2_recorder_array[i][0]))
-            valid = allocated & rs1_valid & rs2_valid & ~(alu_type_array[i] == Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_MUL))
-            valid_to_mul = allocated & rs1_valid & rs2_valid & (alu_type_array[i] == Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_MUL))
+            
+            is_mul_inst = (alu_type_array[i] == Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_MUL))
+            is_div_inst = (alu_type_array[i] == Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_DIV)) | (alu_type_array[i] == Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_REM))
+            
+            valid = allocated & rs1_valid & rs2_valid & ~is_mul_inst & ~is_div_inst
+            valid_to_mul = allocated & rs1_valid & rs2_valid & is_mul_inst
+            valid_to_div = allocated & rs1_valid & rs2_valid & is_div_inst
+            
             send_index = valid.select(Bits(3)(i), send_index)
             send = valid.select(Bits(1)(1), send)
             send_index_to_mul = valid_to_mul.select(Bits(3)(i), send_index_to_mul)
             send_to_mul = valid_to_mul.select(Bits(1)(1), send_to_mul)
+            send_index_to_div = valid_to_div.select(Bits(3)(i), send_index_to_div)
+            send_to_div = valid_to_div.select(Bits(1)(1), send_to_div)
 
         a = (rs1_array[send_index] == Bits(5)(0)).select(Bits(32)(0), read_mux(rs1_value_array, send_index, RS_SIZE, 32))
         b = (rs2_array[send_index] == Bits(5)(0)).select(Bits(32)(0), read_mux(rs2_value_array, send_index, RS_SIZE, 32))
@@ -151,6 +170,13 @@ class RS(Module):
         mul_alu_b = mul_b
         send_to_mul = send_to_mul & (~clear_signal_array[0])
 
+        # Division ALU operands
+        div_a = (rs1_array[send_index_to_div] == Bits(5)(0)).select(Bits(32)(0), read_mux(rs1_value_array, send_index_to_div, RS_SIZE, 32))
+        div_b = (rs2_array[send_index_to_div] == Bits(5)(0)).select(Bits(32)(0), read_mux(rs2_value_array, send_index_to_div, RS_SIZE, 32))
+        div_alu_a = div_a
+        div_alu_b = div_b
+        send_to_div = send_to_div & (~clear_signal_array[0])
+
         with Condition(send):
             # Send the first ready instruction to ALU for execution.
             write1hot(allocated_array, send_index, Bits(1)(0), width = 3)
@@ -158,6 +184,10 @@ class RS(Module):
         with Condition(send_to_mul):
             # Send the first ready instruction to MUL_ALU for execution.
             write1hot(allocated_array, send_index_to_mul, Bits(1)(0), width = 3)
+
+        with Condition(send_to_div):
+            # Send the first ready instruction to DIV_ALU for execution.
+            write1hot(allocated_array, send_index_to_div, Bits(1)(0), width = 3)
 
 
         alu.async_called(
@@ -186,6 +216,19 @@ class RS(Module):
             get_high_bit = get_high_bit_array[send_index_to_mul],
             rs1_sign = rs1_sign_array[send_index_to_mul],
             rs2_sign = rs2_sign_array[send_index_to_mul],
+            clear = clear_signal_array[0],
+        )
+
+        div_alu.async_called(
+            valid = send_to_div,
+            rob_index = rob_index_array[send_index_to_div],
+            alu_a = div_alu_a,
+            alu_b = div_alu_b,
+            calc_type = send_to_div.select(alu_type_array[send_index_to_div], Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_NONE)),
+            pc_addr = addr_array[send_index_to_div],
+            get_remainder = get_remainder_array[send_index_to_div],
+            rs1_sign = rs1_sign_array[send_index_to_div],
+            rs2_sign = rs2_sign_array[send_index_to_div],
             clear = clear_signal_array[0],
         )
 

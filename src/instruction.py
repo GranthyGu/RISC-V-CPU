@@ -193,7 +193,7 @@ class BInstruction(Instruction):
         return InstSignal(eq, RV32I_ALU.ALU_ADD, cond = (cmp, flip))
 
 class RV32I_ALU:
-    CNT = 16
+    CNT = 18
 
     ALU_ADD = 0
     ALU_SUB = 1
@@ -211,6 +211,8 @@ class RV32I_ALU:
     ALU_TRUE = 11
     ALU_NONE = 15
     ALU_MUL = 14
+    ALU_DIV = 16
+    ALU_REM = 17
 
 supported_opcodes = [
     ("jal", (0b1101111, RV32I_ALU.ALU_ADD, (RV32I_ALU.ALU_TRUE, False)), JInstruction),
@@ -224,6 +226,12 @@ supported_opcodes = [
     ("mulh", (0b0110011, 0b001, 0b0000001, RV32I_ALU.ALU_MUL), RInstruction),
     ("mulhu", (0b0110011, 0b011, 0b0000001, RV32I_ALU.ALU_MUL), RInstruction),
     ("mulhsu", (0b0110011, 0b010, 0b0000001, RV32I_ALU.ALU_MUL), RInstruction),
+    
+    # Division instructions (RV32M extension)
+    ("div", (0b0110011, 0b100, 0b0000001, RV32I_ALU.ALU_DIV), RInstruction),
+    ("divu", (0b0110011, 0b101, 0b0000001, RV32I_ALU.ALU_DIV), RInstruction),
+    ("rem", (0b0110011, 0b110, 0b0000001, RV32I_ALU.ALU_REM), RInstruction),
+    ("remu", (0b0110011, 0b111, 0b0000001, RV32I_ALU.ALU_REM), RInstruction),
 
     ("jalr", (0b1100111, 0b000, RV32I_ALU.ALU_ADD, (RV32I_ALU.ALU_TRUE, False), None, None), IInstruction),
     ("addi", (0b0010011, 0b000, RV32I_ALU.ALU_ADD, None, None, None), IInstruction),
@@ -307,7 +315,11 @@ decoder_signals = Record(
     # Whether rs1 is signed or unsigned, useful for multiplication.
     rs1_sign = Bits(1),
     # Whether rs2 is signed or unsigned, useful for multiplication.
-    rs2_sign = Bits(1)
+    rs2_sign = Bits(1),
+    # Whether this is a division instruction.
+    is_div = Bits(1),
+    # In division instructions, whether to get the remainder instead of quotient.
+    get_remainder = Bits(1)
 )
 
 supported_types = [RInstruction, IInstruction, BInstruction, UInstruction, JInstruction, SInstruction]

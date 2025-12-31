@@ -100,10 +100,13 @@ def decode_logic(instruction):
     is_pc_calc = eqs['auipc']
     is_mult = (alu == Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_MUL))
     get_high_bit = eqs['mulh'] | eqs['mulhu'] | eqs['mulhsu']
-    rs1_sign = eqs['mulh'] | eqs['mulhsu']
-    rs2_sign = eqs['mulh']
+    rs1_sign = eqs['mulh'] | eqs['mulhsu'] | eqs['div'] | eqs['rem']
+    rs2_sign = eqs['mulh'] | eqs['div'] | eqs['rem']
     memory_length = eqs['lbu'].select(Bits(2)(0), Bits(2)(2)) # 00: byte, 01: half, 10: word
     
+    # Division related signals
+    is_div = (alu == Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_DIV)) | (alu == Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_REM))
+    get_remainder = eqs['rem'] | eqs['remu']
 
     rd = rd_valid.select(views[RInstruction].view().rd, Bits(5)(0))
     rs1 = rs1_valid.select(views[RInstruction].view().rs1, Bits(5)(0))
@@ -161,4 +164,6 @@ def decode_logic(instruction):
         rs1_sign = rs1_sign,
         rs2_sign = rs2_sign,
         memory_length = memory_length,
+        is_div = is_div,
+        get_remainder = get_remainder,
     )

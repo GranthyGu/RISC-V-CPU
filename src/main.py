@@ -14,6 +14,7 @@ from RS import *
 from alu import *
 from lsq import *
 from mul_alu import *
+from div_alu import *
 
 current_path = os.path.dirname(os.path.abspath(__file__))
 workspace = f"{current_path}/.workspace/"
@@ -45,7 +46,7 @@ def init_workspace(base_path, case):
     cp_if_exists(f'{base_path}/{case}.config', f'{workspace}/workload.config', False)
 
 def build_cpu(depth_log: int):
-    init_workspace(f"{current_path}/workloads", "vector_multiply")
+    init_workspace(f"{current_path}/workloads", "0to100")
     with open(f'{workspace}/workload.config') as f:
         raw = f.readline()
         raw = raw.replace('offset:', "'offset':").replace('data_offset:', "'data_offset':")
@@ -67,6 +68,11 @@ def build_cpu(depth_log: int):
         result_array_to_mul_alu = RegArray(Bits(32), 1)
         pc_result_array_to_mul_alu = RegArray(Bits(32), 1)
         signal_array_to_mul_alu = RegArray(Bits(1), 1)
+
+        rob_index_array_to_div_alu = RegArray(Bits(3), 1)
+        result_array_to_div_alu = RegArray(Bits(32), 1)
+        pc_result_array_to_div_alu = RegArray(Bits(32), 1)
+        signal_array_to_div_alu = RegArray(Bits(1), 1)
 
         rob_index_array_to_lsq = RegArray(Bits(3), 1)
         pc_result_array_to_lsq = RegArray(Bits(32), 1)
@@ -97,6 +103,7 @@ def build_cpu(depth_log: int):
         rs = RS()
         lsq = LSQ()
         mul_alu = MUL_ALU()
+        div_alu = DIV_ALU()
         dcache = SRAM(width=32, depth = 1<<depth_log, init_file = f"{workspace}/workload.data")
         dcache.name = "dcache"
 
@@ -113,6 +120,11 @@ def build_cpu(depth_log: int):
             result_array_from_mul_alu = result_array_to_mul_alu,
             pc_result_array_from_mul_alu = pc_result_array_to_mul_alu,
             signal_array_from_mul_alu = signal_array_to_mul_alu,
+
+            rob_index_array_from_div_alu = rob_index_array_to_div_alu,
+            result_array_from_div_alu = result_array_to_div_alu,
+            pc_result_array_from_div_alu = pc_result_array_to_div_alu,
+            signal_array_from_div_alu = signal_array_to_div_alu,
 
             rob_index_array_from_lsq = rob_index_array_to_lsq,
             result_array_from_lsq = dcache.dout,
@@ -154,6 +166,7 @@ def build_cpu(depth_log: int):
         rs.build(
             alu = alu,
             mul_alu = mul_alu,
+            div_alu = div_alu,
             clear_signal_array = clear_signal_array,
         )
         
@@ -169,6 +182,13 @@ def build_cpu(depth_log: int):
             result_array = result_array_to_mul_alu,
             pc_result_array = pc_result_array_to_mul_alu,
             signal_array = signal_array_to_mul_alu
+        )
+
+        div_alu.build(
+            rob_index_array = rob_index_array_to_div_alu,
+            result_array = result_array_to_div_alu,
+            pc_result_array = pc_result_array_to_div_alu,
+            signal_array = signal_array_to_div_alu
         )
         
         lsq.build(

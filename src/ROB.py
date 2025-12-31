@@ -32,6 +32,10 @@ class ROB(Module):
         result_array_from_mul_alu: Array,
         pc_result_array_from_mul_alu: Array,
         signal_array_from_mul_alu: Array,
+        rob_index_array_from_div_alu: Array,
+        result_array_from_div_alu: Array,
+        pc_result_array_from_div_alu: Array,
+        signal_array_from_div_alu: Array,
         rob_index_array_from_lsq: Array,
         result_array_from_lsq: Array,
         pc_result_array_from_lsq: Array,
@@ -63,6 +67,7 @@ class ROB(Module):
         is_branch_array = RegArray(Bits(1), ROB_SIZE)
         is_load_or_store_array = RegArray(Bits(1), ROB_SIZE)
         is_mult_array = RegArray(Bits(1), ROB_SIZE)
+        is_div_array = RegArray(Bits(1), ROB_SIZE)
         predicted_taken_array = RegArray(Bits(1), ROB_SIZE)
         pred_next_pc_array = RegArray(Bits(32), ROB_SIZE)
 
@@ -72,6 +77,7 @@ class ROB(Module):
         rs2_array = RegArray(Bits(5), ROB_SIZE)
         imm_array = RegArray(Bits(32), ROB_SIZE)
         mul_result_array = RegArray(Bits(32), ROB_SIZE)
+        div_result_array = RegArray(Bits(32), ROB_SIZE)
         calc_result_array = RegArray(Bits(32), ROB_SIZE)
         load_result_array = RegArray(Bits(32), ROB_SIZE)
         memory_length_array = RegArray(Bits(2), ROB_SIZE)
@@ -141,6 +147,7 @@ class ROB(Module):
         lsq_modify_recorder = modify_recorder
         modify_value = is_load_or_store_array[head_idx].select(load_result_array[head_idx], calc_result_array[head_idx])
         modify_value = is_mult_array[head_idx].select(mul_result_array[head_idx], modify_value)
+        modify_value = is_div_array[head_idx].select(div_result_array[head_idx], modify_value)
 
         rs_write = should_receive & ~is_misprediction & (~is_load_or_store)
         lsq_write = should_receive & ~is_misprediction & is_load_or_store
@@ -152,6 +159,7 @@ class ROB(Module):
             addr_array[tail_idx] = addr
             is_load_or_store_array[tail_idx] = is_load_or_store
             is_mult_array[tail_idx] = signals.is_mult
+            is_div_array[tail_idx] = signals.is_div
             memory_length_array[tail_idx] = signals.memory_length
             write1hot(ready_array, tail_idx, Bits(1)(0))
             is_final_array[tail_idx] = is_final
@@ -171,6 +179,14 @@ class ROB(Module):
             mul_result_array[rob_index_from_mul_alu[0:2]] = result_array_from_mul_alu[0]
             write1hot(pc_result_array, rob_index_from_mul_alu[0:2], pc_result_array_from_mul_alu[0], width = 3)
             write1hot(ready_array, rob_index_from_mul_alu[0:2], Bits(1)(1), width = 3)
+
+        rob_index_from_div_alu = rob_index_array_from_div_alu[0]
+        write_result_from_div_alu = signal_array_from_div_alu[0]
+        write_result_from_div_alu = write_result_from_div_alu & read_mux(allocated_array, rob_index_from_div_alu[0:2], ROB_SIZE, 1)
+        with Condition(write_result_from_div_alu):
+            div_result_array[rob_index_from_div_alu[0:2]] = result_array_from_div_alu[0]
+            write1hot(pc_result_array, rob_index_from_div_alu[0:2], pc_result_array_from_div_alu[0], width = 3)
+            write1hot(ready_array, rob_index_from_div_alu[0:2], Bits(1)(1), width = 3)
         
         rob_index_from_lsq = rob_index_array_from_lsq[0]
         write_signal_from_lsq = signal_array_from_lsq[0]
