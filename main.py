@@ -193,7 +193,6 @@ def build_cpu(depth_log: int):
     simulator_path, verilog_path = elaborate(sys, **conf)
 
     raw = utils.run_verilator(verilog_path)
-    # raw = utils.run_simulator(simulator_path)
     with open(f'{workspace}/verilation.log', 'w') as f:
         f.write(raw)
     print(f"Verilation log saved to {workspace}/verilation.log")

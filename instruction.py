@@ -235,7 +235,6 @@ supported_opcodes = [
     ('ebreak', (0b1110011, 0b000, RV32I_ALU.ALU_NONE, None,0b000000000001,None), IInstruction),
 
     ('sw'    , (0b0100011, 0b010, RV32I_ALU.ALU_ADD), SInstruction),
-    # ('sb'    , (0b0100011, 0b000, RV32I_ALU.ALU_ADD), SInstruction),
 
     # mn,       opcode,    funct3,cmp,                  flip
     ('beq'   , (0b1100011, 0b000, RV32I_ALU.ALU_CMP_EQ,  False), BInstruction),
@@ -286,10 +285,12 @@ decoder_signals = Record(
     is_pc_calc = Bits(1),
     imm = Bits(32),
     imm_valid = Bits(1),
-    memory = Bits(2), # 第 0 位是读，第 1 位是写
+    # Bit 0 is read, bit 1 is write.
+    memory = Bits(2),
     alu = Bits(RV32I_ALU.CNT),
     cond = Bits(RV32I_ALU.CNT),
-    flip = Bits(1), # 是否需要翻转符号
+    # Whether to flip the sign.
+    flip = Bits(1),
     is_branch = Bits(1),
     is_offset_br = Bits(1),
     link_pc = Bits(1),
@@ -298,11 +299,15 @@ decoder_signals = Record(
     is_reg_write = Bits(1),
     is_load_or_store = Bits(1),
     is_jalr = Bits(1),
-    memory_length = Bits(2), # 00: byte, 01: half, 10: word
+    # 00: byte, 01: half, 10: word
+    memory_length = Bits(2),
     is_mult = Bits(1),
-    get_high_bit = Bits(1), # 乘法指令中，是否获取高 32 位
-    rs1_sign = Bits(1), # 记录 rs1 到底是有符号还是无符号，乘法的时候有用
-    rs2_sign = Bits(1)  # 记录 rs2 到底是有符号还是无符号，乘法的时候有用
+    # In multiplication instructions, whether to get the high 32 bits.
+    get_high_bit = Bits(1),
+    # Whether rs1 is signed or unsigned, useful for multiplication.
+    rs1_sign = Bits(1),
+    # Whether rs2 is signed or unsigned, useful for multiplication.
+    rs2_sign = Bits(1)
 )
 
 supported_types = [RInstruction, IInstruction, BInstruction, UInstruction, JInstruction, SInstruction]

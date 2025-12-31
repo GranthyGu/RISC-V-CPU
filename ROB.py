@@ -45,7 +45,6 @@ class ROB(Module):
         btb_target_array: Array,
         bht_log_size: int
     ):
-        # log("signal_array_from_mul_alu: {}", signal_array_from_mul_alu[0])
         rf_value_array = RegArray(Bits(32), 32)
         rf_recorder_array = RegArray(Bits(3), 32)
         rf_has_recorder_array = [RegArray(Bits(1), 1) for _ in range(32)]
@@ -147,7 +146,6 @@ class ROB(Module):
         lsq_write = should_receive & ~is_misprediction & is_load_or_store
 
         with Condition(should_receive & ~is_misprediction):
-            # log("ROB entry {} allocated", tail_ptr)
             is_branch_array[tail_idx] = is_branch
             is_memory_write_array[tail_idx] = is_memory_write
             is_reg_write_array[tail_idx] = is_reg_write
@@ -162,7 +160,6 @@ class ROB(Module):
         write_result_from_alu = signal_array_from_alu[0]
         write_result_from_alu = write_result_from_alu & read_mux(allocated_array, rob_index_from_alu[0:2], ROB_SIZE, 1)
         with Condition(write_result_from_alu):
-            # log("Write back from ALU to ROB entry {} | value: 0x{:08x}", rob_index_from_alu[0:2], result_array_from_alu[0])
             calc_result_array[rob_index_from_alu[0:2]] = result_array_from_alu[0]
             write1hot(pc_result_array, rob_index_from_alu[0:2], pc_result_array_from_alu[0], width = 3)
             write1hot(ready_array, rob_index_from_alu[0:2], Bits(1)(1), width = 3)
@@ -171,7 +168,6 @@ class ROB(Module):
         write_result_from_mul_alu = signal_array_from_mul_alu[0]
         write_result_from_mul_alu = write_result_from_mul_alu & read_mux(allocated_array, rob_index_from_mul_alu[0:2], ROB_SIZE, 1)
         with Condition(write_result_from_mul_alu):
-            #log("Write back from MUL ALU to ROB entry {} | value: 0x{:08x}", rob_index_from_mul_alu[0:2], result_array_from_mul_alu[0])
             mul_result_array[rob_index_from_mul_alu[0:2]] = result_array_from_mul_alu[0]
             write1hot(pc_result_array, rob_index_from_mul_alu[0:2], pc_result_array_from_mul_alu[0], width = 3)
             write1hot(ready_array, rob_index_from_mul_alu[0:2], Bits(1)(1), width = 3)
@@ -213,7 +209,6 @@ class ROB(Module):
         old_state = bht_array[bht_idx]
         
         with Condition(commit & is_branch_array[head_idx]):
-            # log("Update Predictor: PC 0x{:05x} | OldState {} | ActualTaken {}", addr_array[head_idx], old_state, actual_taken)
             state_uint = old_state.bitcast(UInt(2))
             res_plus = (state_uint + UInt(2)(1)).bitcast(Bits(2))
             res_minus = (state_uint - UInt(2)(1)).bitcast(Bits(2))
@@ -232,7 +227,6 @@ class ROB(Module):
             finish()
 
         with Condition(is_misprediction):
-            # log("Branch misprediction: ROB {} | Actual: {} | Pred: {}", head_ptr, actual_taken, pred_taken_stored)
             reset_pc_addr_array[0] = pc_result_val
             for i in range(32):
                 rf_has_recorder_array[i][0] = Bits(1)(0)

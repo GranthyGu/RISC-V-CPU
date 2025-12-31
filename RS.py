@@ -14,7 +14,8 @@ class RS(Module):
             ports = {
                 "rs_write": Port(Bits(1)),
                 "rs_modify_recorder": Port(Bits(1)),
-                "rob_index": Port(Bits(3)),                # 当前这个 entry 在 rs 中的下标
+                # The index of this entry in RS.
+                "rob_index": Port(Bits(3)),
                 "signals": Port(decoder_signals),
                 "rs1_value": Port(Bits(32)),
                 "rs1_recorder": Port(Bits(3)),
@@ -22,7 +23,8 @@ class RS(Module):
                 "rs2_value": Port(Bits(32)),
                 "rs2_recorder": Port(Bits(3)),
                 "rs2_has_recorder": Port(Bits(1)),
-                "addr": Port(Bits(32)),                    # 计算对应的指令的地址
+                # The address of the corresponding instruction.
+                "addr": Port(Bits(32)),
                 "rs_modify_rd": Port(Bits(5)),
                 "rs_recorder": Port(Bits(3)),
                 "rs_modify_value": Port(Bits(32)),
@@ -38,8 +40,9 @@ class RS(Module):
             clear_signal_array: Array,
         ):
 
-        # RS 自身的性质
-        allocated_array = [RegArray(Bits(1), 1) for _ in range(RS_SIZE)]          # RS 中这一条有没有分配指令
+        # Properties of RS itself.
+        # Whether this entry in RS has an allocated instruction.
+        allocated_array = [RegArray(Bits(1), 1) for _ in range(RS_SIZE)]
 
         rob_index_array = RegArray(Bits(3), RS_SIZE)
         rs1_array = RegArray(Bits(5), RS_SIZE)
@@ -84,7 +87,7 @@ class RS(Module):
 
         allocated =  read_mux(allocated_array, rob_index, RS_SIZE, 1).select(Bits(1)(1), Bits(1)(0))
 
-        # 非常有意思的设计
+        # A very interesting design.
         rs1_coincidence = rs1_has_recorder & (rs1_recorder == rs_recorder) & rs_modify_recorder
         rs1_has_recorder = rs1_coincidence.select(Bits(1)(0), rs1_has_recorder)
         rs1_value = rs1_coincidence.select(rs_modify_value, rs1_value)
@@ -94,9 +97,6 @@ class RS(Module):
         rs2_value = rs2_coincidence.select(rs_modify_value, rs2_value)
 
         with Condition(rs_write & ~allocated):
-            # log("RS entry {} allocated", rob_index)
-            # log("RS write: rs1_value: 0x{:08x} | rs1_recorder: {} | rs1_has_recorder: {} | rs2_value: 0x{:08x} | rs2_recorder: {} | rs2_has_recorder: {}",
-            #     rs1_value, rs1_recorder, rs1_has_recorder, rs2_value, rs2_recorder, rs2_has_recorder)
             rob_index_array[rob_index] = rob_index
             rs1_array[rob_index] = signals.rs1
             has_rs1_array[rob_index] = signals.rs1_valid
@@ -137,8 +137,6 @@ class RS(Module):
             send_index_to_mul = valid_to_mul.select(Bits(3)(i), send_index_to_mul)
             send_to_mul = valid_to_mul.select(Bits(1)(1), send_to_mul)
 
-        # log("send_index: {} | send: {}", send_index, send)
-
         a = (rs1_array[send_index] == Bits(5)(0)).select(Bits(32)(0), read_mux(rs1_value_array, send_index, RS_SIZE, 32))
         b = (rs2_array[send_index] == Bits(5)(0)).select(Bits(32)(0), read_mux(rs2_value_array, send_index, RS_SIZE, 32))
 
@@ -154,13 +152,11 @@ class RS(Module):
         send_to_mul = send_to_mul & (~clear_signal_array[0])
 
         with Condition(send):
-            # 这里需要实现把已经准备好的第一条指令送去 alu 执行
-            # log("RS entry {} send to alu", send_index)
+            # Send the first ready instruction to ALU for execution.
             write1hot(allocated_array, send_index, Bits(1)(0), width = 3)
 
         with Condition(send_to_mul):
-            # 这里需要实现把已经准备好的第一条指令送去 alu_mul 执行
-            # log("RS entry {} send to mul_alu", send_index_to_mul)
+            # Send the first ready instruction to MUL_ALU for execution.
             write1hot(allocated_array, send_index_to_mul, Bits(1)(0), width = 3)
 
 
@@ -194,22 +190,14 @@ class RS(Module):
         )
 
         with Condition(rs_modify_recorder):
-            # log("RS modify recorder: rs_recorder: {} | rs_modify_value: 0x{:08x}",
-            #    rs_recorder, rs_modify_value)
             for i in range(RS_SIZE):
                 with Condition(allocated_array[i][0] & has_rs1_recorder_array[i][0] & (rs1_recorder_array[i] == rs_recorder)):
-                    # log("RS entry {} rs1_recorder matched, updating value", Bits(5)(i))
                     has_rs1_recorder_array[i][0] = Bits(1)(0)
                     rs1_value_array[i][0] = rs_modify_value
                 with Condition(allocated_array[i][0] & has_rs2_recorder_array[i][0] & (rs2_recorder_array[i] == rs_recorder)):
-                    # log("RS entry {} rs2_recorder matched, updating value", Bits(5)(i))
                     has_rs2_recorder_array[i][0] = Bits(1)(0)
                     rs2_value_array[i][0]= rs_modify_value
 
         with Condition(clear_signal_array[0]):
             for i in range(RS_SIZE):
                 allocated_array[i][0] = Bits(1)(0)
-
-        # for i in range(RS_SIZE):
-            # log("rs1_value_array[{}] = 0x{:08x} | rs2_value_array[{}] = 0x{:08x}", Bits(3)(i), rs1_value_array[i][0], Bits(3)(i), rs2_value_array[i][0])
-            # log("has_rs1_recorder_array[{}] = {} | has_rs2_recorder_array[{}] = {}", Bits(3)(i), has_rs1_recorder_array[i][0], Bits(3)(i), has_rs2_recorder_array[i][0])
