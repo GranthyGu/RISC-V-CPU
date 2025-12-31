@@ -46,7 +46,7 @@ def init_workspace(base_path, case):
     cp_if_exists(f'{base_path}/{case}.config', f'{workspace}/workload.config', False)
 
 def build_cpu(depth_log: int):
-    init_workspace(f"{current_path}/workloads", "0to100")
+    init_workspace(f"{current_path}/workloads", "division")
     with open(f'{workspace}/workload.config') as f:
         raw = f.readline()
         raw = raw.replace('offset:', "'offset':").replace('data_offset:', "'data_offset':")
