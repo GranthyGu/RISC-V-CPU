@@ -4,7 +4,8 @@ from instruction import *
 
 def decode_logic(instruction):
 
-    views = {i: i(instruction) for i in supported_types} # 这里的 views 指的是什么
+    # "views" is a dictionary mapping each instruction type to its view of the instruction.
+    views = {i: i(instruction) for i in supported_types}
     is_type = {i: Bits(1)(0) for i in supported_types}
 
     eqs = {}
@@ -13,9 +14,11 @@ def decode_logic(instruction):
     rs1_valid = Bits(1)(0)
     rs2_valid = Bits(1)(0)
     imm_valid = Bits(1)(0)
-    supported = Bits(1)(0) # supported 意为我们的 CPU 是否支持这个指令
+    # "supported" indicates whether our CPU supports this instruction.
+    supported = Bits(1)(0)
 
-    alu = Bits(RV32I_ALU.CNT)(0) # alu 的具体含义是什么
+    # "alu" represents the specific ALU operation type.
+    alu = Bits(RV32I_ALU.CNT)(0)
     cond = Bits(RV32I_ALU.CNT)(0)
     flip = Bits(1)(0)
 
@@ -33,13 +36,17 @@ def decode_logic(instruction):
         flip = flip | eq.select(signal.flip, Bits(1)(0))
 
         suffix_length = 6 - len(mn)
-        suffix = ' ' * suffix_length # suffix 的作用是什么
+        # "suffix" is used for format alignment.
+        suffix = ' ' * suffix_length
 
-        fmt = None # fmt 是什么
+        # "fmt" is the format string for logging.
+        fmt = None
         opcode = args[0]
-        str_opcode = bin(opcode)[2:] # 将 opcode 转化为没有前缀的二进制字符串
+        # Convert opcode to a binary string without prefix.
+        str_opcode = bin(opcode)[2:]
         str_opcode = (7 - len(str_opcode)) * '0' + str_opcode
-        fmt = f"{cur_type.PREFIX}.{mn}.{str_opcode}{suffix}" # 格式对齐
+        # Format alignment.
+        fmt = f"{cur_type.PREFIX}.{mn}.{str_opcode}{suffix}"
 
         args = []
 
@@ -75,7 +82,6 @@ def decode_logic(instruction):
     with Condition(~supported):
         view = views[RInstruction].view()
         log("Unsupported instruction: opcode = 0x{:x} func3: 0x{:x} func7: 0x{:x}", view.opcode, view.func3, view.func7)
-        # assume(Bits(1)(0)) 等价于 C++ 中的 assert(false)
 
     alu = supported.select(alu, Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_NONE))
     cond = supported.select(cond, Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_TRUE))
@@ -92,6 +98,12 @@ def decode_logic(instruction):
     link_pc = eqs['jalr'] | eqs['jal']
     is_jalr = eqs['jalr']
     is_pc_calc = eqs['auipc']
+    is_mult = (alu == Bits(RV32I_ALU.CNT)(1 << RV32I_ALU.ALU_MUL))
+    get_high_bit = eqs['mulh'] | eqs['mulhu'] | eqs['mulhsu']
+    rs1_sign = eqs['mulh'] | eqs['mulhsu']
+    rs2_sign = eqs['mulh']
+    memory_length = eqs['lbu'].select(Bits(2)(0), Bits(2)(2)) # 00: byte, 01: half, 10: word
+    
 
     rd = rd_valid.select(views[RInstruction].view().rd, Bits(5)(0))
     rs1 = rs1_valid.select(views[RInstruction].view().rs1, Bits(5)(0))
@@ -143,5 +155,10 @@ def decode_logic(instruction):
         csr_calculate=csr_calculate,
         is_zimm = is_zimm,
         is_mepc = is_mepc,
-        mem_ext = mem_ext
+        mem_ext = mem_ext,
+        is_mult = is_mult,
+        get_high_bit = get_high_bit,
+        rs1_sign = rs1_sign,
+        rs2_sign = rs2_sign,
+        memory_length = memory_length,
     )

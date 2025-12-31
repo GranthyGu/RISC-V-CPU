@@ -128,7 +128,7 @@ class UInstruction(Instruction):
     def imm(self, pad):
         raw = self.view().imm
         if pad:
-            raw = concat(Bits(12)(0), raw)
+            raw = concat(raw, Bits(12)(0))
         return raw
     
     def decode(self, opcode, alu):
@@ -210,6 +210,7 @@ class RV32I_ALU:
     ALU_CMP_LTU = 10
     ALU_TRUE = 11
     ALU_NONE = 15
+    ALU_MUL = 14
 
 supported_opcodes = [
     ("jal", (0b1101111, RV32I_ALU.ALU_ADD, (RV32I_ALU.ALU_TRUE, False)), JInstruction),
@@ -219,6 +220,10 @@ supported_opcodes = [
     ("add", (0b0110011, 0b000, 0b0000000, RV32I_ALU.ALU_ADD), RInstruction),
     ("sub", (0b0110011, 0b000, 0b0100000, RV32I_ALU.ALU_SUB), RInstruction),
     ("or", (0b0110011, 0b110, 0b0000000, RV32I_ALU.ALU_OR), RInstruction),
+    ("mul", (0b0110011, 0b000, 0b0000001, RV32I_ALU.ALU_MUL), RInstruction),
+    ("mulh", (0b0110011, 0b001, 0b0000001, RV32I_ALU.ALU_MUL), RInstruction),
+    ("mulhu", (0b0110011, 0b011, 0b0000001, RV32I_ALU.ALU_MUL), RInstruction),
+    ("mulhsu", (0b0110011, 0b010, 0b0000001, RV32I_ALU.ALU_MUL), RInstruction),
 
     ("jalr", (0b1100111, 0b000, RV32I_ALU.ALU_ADD, (RV32I_ALU.ALU_TRUE, False), None, None), IInstruction),
     ("addi", (0b0010011, 0b000, RV32I_ALU.ALU_ADD, None, None, None), IInstruction),
@@ -230,6 +235,7 @@ supported_opcodes = [
     ('ebreak', (0b1110011, 0b000, RV32I_ALU.ALU_NONE, None,0b000000000001,None), IInstruction),
 
     ('sw'    , (0b0100011, 0b010, RV32I_ALU.ALU_ADD), SInstruction),
+    # ('sb'    , (0b0100011, 0b000, RV32I_ALU.ALU_ADD), SInstruction),
 
     # mn,       opcode,    funct3,cmp,                  flip
     ('beq'   , (0b1100011, 0b000, RV32I_ALU.ALU_CMP_EQ,  False), BInstruction),
@@ -259,6 +265,7 @@ supported_opcodes = [
     ('ecall' , (0b1110011, 0b000, RV32I_ALU.ALU_NONE, None,0b000000000000,None), IInstruction),
     
     ('and' , (0b0110011, 0b111, 0b0000000, RV32I_ALU.ALU_AND), RInstruction),
+    ('xor' , (0b0110011, 0b100, 0b0000000, RV32I_ALU.ALU_XOR), RInstruction),
     ('andi' , (0b0010011, 0b111, RV32I_ALU.ALU_AND, None,None,None), IInstruction),
     ('ori' , (0b0010011, 0b110, RV32I_ALU.ALU_ORI, None,None,None), IInstruction),
     ('xori' , (0b0010011, 0b100, RV32I_ALU.ALU_XOR, None,None,None), IInstruction),
@@ -291,6 +298,11 @@ decoder_signals = Record(
     is_reg_write = Bits(1),
     is_load_or_store = Bits(1),
     is_jalr = Bits(1),
+    memory_length = Bits(2), # 00: byte, 01: half, 10: word
+    is_mult = Bits(1),
+    get_high_bit = Bits(1), # 乘法指令中，是否获取高 32 位
+    rs1_sign = Bits(1), # 记录 rs1 到底是有符号还是无符号，乘法的时候有用
+    rs2_sign = Bits(1)  # 记录 rs2 到底是有符号还是无符号，乘法的时候有用
 )
 
 supported_types = [RInstruction, IInstruction, BInstruction, UInstruction, JInstruction, SInstruction]
